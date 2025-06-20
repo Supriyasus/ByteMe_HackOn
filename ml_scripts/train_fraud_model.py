@@ -123,3 +123,17 @@ joblib.dump(iso_forest, os.path.join(output_dir, 'isolation_forest_model.joblib'
 joblib.dump(scaler, os.path.join(output_dir, 'scaler.joblib'))
 print(f"\nSuccessfully saved the model and scaler to the '{output_dir}' directory.")
 print("\n--- SCRIPT COMPLETE ---")
+
+
+# --- ADD THIS SECTION TO SAVE THE RESULTS FOR THE API ---
+print("\n--- Saving results for API consumption ---")
+# Define the path to the data directory in the backend
+# This makes it easy for the FastAPI server to find it
+backend_data_path = 'backend/data'
+os.makedirs(backend_data_path, exist_ok=True) 
+
+# Save the top 20 suspicious customers to a JSON file
+report_path = os.path.join(backend_data_path, 'suspicious_customers_report.json')
+suspicious_customers.head(20).to_json(report_path, orient='records')
+
+print(f"Saved top 20 suspicious customers report to '{report_path}'")

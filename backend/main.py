@@ -2,12 +2,11 @@ from fastapi import FastAPI
 from routers import metrics
 from fastapi.middleware.cors import CORSMiddleware
 from Post_Purchase.routers import fraud_router      #For Post_Purchase
+#import routers.ingestion
+app = FastAPI(
+    title="BYTEME Hackathon Project",
+)
 
-app = FastAPI()
-
-app.include_router(ingestion.router)
-app.include_router(metrics.router)
-app.include_router(fraud_router.router, prefix="/api/v1")   #For Post_Purchase
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,3 +15,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+#app.include_router(ingestion.router)
+app.include_router(metrics.router)
+app.include_router(fraud_router.router, prefix="/api/v1")   #For Post_Purchase
+
+
+@app.get("/")
+def read_root():
+    return {"message": "API is running"}

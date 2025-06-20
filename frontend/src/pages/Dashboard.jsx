@@ -1,22 +1,85 @@
 import React, { useEffect, useState } from "react";
-import { fetchMetrics } from "../services/api.js"
+import { fetchMetrics, fetchSuspiciousCustomers  } from "../services/api.js"
 import { Bar, Line } from "react-chartjs-2";
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, LineElement, PointElement } from "chart.js";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement);
 
+// === REPLACE THE OLD SuspiciousCustomersTable with this corrected version ===
+
+const SuspiciousCustomersTable = ({ customers }) => {
+  if (!customers || customers.length === 0) {
+    return <p>No high-risk customer data available.</p>;
+  }
+
+  // Function to format currency
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
+  }
+
+  // Define style objects at the top for clarity
+  const tableHeaderStyle = { textAlign: "left", padding: "8px", borderBottom: "2px solid #ccc" };
+  // Create a right-aligned version for the numerical columns
+  const tableHeaderRightAlignStyle = { ...tableHeaderStyle, textAlign: "right" };
+  const tableCellStyle = { textAlign: "left", padding: "8px" };
+  const tableCellRightAlignStyle = { ...tableCellStyle, textAlign: "right" };
+
+  return (
+    <div style={{ marginTop: "40px" }}>
+      <h3>High-Risk Customer Watchlist</h3>
+      <p>Top customers flagged for anomalous return behavior by the model.</p>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
+        <thead style={{ backgroundColor: "#f2f2f2" }}>
+          <tr>
+            <th style={tableHeaderStyle}>Customer ID</th>
+            <th style={tableHeaderStyle}>Risk Score</th>
+            {/* --- THIS IS THE CORRECTED PART --- */}
+            <th style={tableHeaderRightAlignStyle}>Return Rate (by items)</th>
+            <th style={tableHeaderRightAlignStyle}>Value Returned</th>
+            <th style={tableHeaderRightAlignStyle}>Net Spend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {customers.map((customer) => (
+            <tr key={customer.CustomerID} style={{ borderBottom: "1px solid #ddd" }}>
+              <td style={tableCellStyle}>{customer.CustomerID}</td>
+              <td style={{...tableCellStyle, color: 'red', fontWeight: 'bold'}}>{customer.anomaly_score.toFixed(4)}</td>
+              <td style={tableCellRightAlignStyle}>{(customer.return_rate_by_items * 100).toFixed(2)}%</td>
+              <td style={tableCellRightAlignStyle}>{formatCurrency(customer.total_value_returned)}</td>
+              <td style={{...tableCellRightAlignStyle, color: customer.total_spend < 0 ? 'red' : 'green'}}>
+                  {formatCurrency(customer.total_spend)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+
 const Dashboard = () => {
   const [metrics, setMetrics] = useState(null);
+
+  // === ADD NEW STATE for the customer list ===
+  const [suspiciousCustomers, setSuspiciousCustomers] = useState([]);
+
 
   useEffect(() => {
     async function loadMetrics() {
       const data = await fetchMetrics();
       setMetrics(data);
+
+      // SuspiciousCustomers List
+      const customersData = await fetchSuspiciousCustomers();
+      setSuspiciousCustomers(customersData); 
     }
     loadMetrics();
+    // loadData();
   }, []);
 
   if (!metrics) return <p>Loading dashboard...</p>;
+  // if (!data) return <p>Loading dashboard2...</p>;
 
   return (
     <div className="dashboard" style={{ padding: "20px" }}>
@@ -71,6 +134,11 @@ const Dashboard = () => {
           }} />
         </div>
       </div>
+
+
+      <SuspiciousCustomersTable customers={suspiciousCustomers} />
+
+
 
       {/* Activity Logs */}
       <div style={{ marginTop: "40px" }}>
