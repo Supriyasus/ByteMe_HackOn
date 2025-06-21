@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { fetchMetrics, fetchSuspiciousCustomers  } from "../services/api.js"
-import { Bar, Line } from "react-chartjs-2";
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, LineElement, PointElement } from "chart.js";
+import { fetchMetrics, fetchSuspiciousCustomers, fetchFlaggedReviews, fetchFakeReviewStats  } from "../services/api.js"
+import { Bar, Line, Pie } from "react-chartjs-2";
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
+// import FakeReviewAnalyzer from '../components/FlaggedReviewsList.jsx';
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement);
+import FlaggedReviewsList from '../components/FlaggedReviewsList';
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
+
+
 
 // === REPLACE THE OLD SuspiciousCustomersTable with this corrected version ===
 
@@ -64,6 +69,9 @@ const Dashboard = () => {
   // === ADD NEW STATE for the customer list ===
   const [suspiciousCustomers, setSuspiciousCustomers] = useState([]);
 
+  const [flaggedReviews, setFlaggedReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ labels: [], datasets: [] });
+  
 
   useEffect(() => {
     async function loadMetrics() {
@@ -73,6 +81,34 @@ const Dashboard = () => {
       // SuspiciousCustomers List
       const customersData = await fetchSuspiciousCustomers();
       setSuspiciousCustomers(customersData); 
+
+      // Fetch the new report data
+      // Fetch new stats and format for PIE chart
+      const statsData = await fetchFakeReviewStats();
+      const formattedStats = {
+          labels: ['Fake Reviews Flagged', 'Real Reviews Analyzed'],
+          datasets: [{
+              label: 'Review Analysis',
+              data: [statsData.fake_count || 0, statsData.real_count || 0],
+              backgroundColor: [
+                  'rgba(255, 99, 132, 0.7)', // Red for Fake
+                  'rgba(54, 162, 235, 0.7)', // Blue for Real
+              ],
+              borderColor: [
+                  'rgba(255, 99, 132, 1)',
+                  'rgba(54, 162, 235, 1)',
+              ],
+              borderWidth: 1,
+          }],
+      };
+      setReviewStats(formattedStats);
+
+
+      const flaggedData = await fetchFlaggedReviews();
+      
+      // 3. VERIFY THE STATE IS BEING SET
+      setFlaggedReviews(flaggedData);
+
     }
     loadMetrics();
     // loadData();
@@ -134,10 +170,28 @@ const Dashboard = () => {
           }} />
         </div>
       </div>
-
+      
 
       <SuspiciousCustomersTable customers={suspiciousCustomers} />
 
+      {/* <FakeReviewAnalyzer /> */}
+
+      <div style={{ display: 'flex', gap: '40px', marginTop: '40px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 400px' }}>
+          <h4>Fake vs. Real Reviews Ratio</h4>
+          {/* Use the Pie component */}
+          <Pie data={reviewStats} options={{ responsive: true, plugins: { legend: { position: 'top' }}}}/>
+        </div>
+        <div style={{ flex: '2 1 600px' }}>
+          <FlaggedReviewsList reviews={flaggedReviews} />
+        </div>
+      </div>
+      
+      {/* SUSPICIOUS CUSTOMERS FLAGGED: */}
+
+      <div style={{ marginTop: '40px' }}>
+        <SuspiciousCustomersTable customers={suspiciousCustomers} />
+      </div>
 
 
       {/* Activity Logs */}
@@ -164,6 +218,7 @@ const Dashboard = () => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };

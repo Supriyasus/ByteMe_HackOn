@@ -4,3 +4,8 @@ pandas
 scikit-learn
 joblib
 # For Post_Purchase
+
+transformers
+torch
+sentence-transformers
+# For Fake Review Detection
