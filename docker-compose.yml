@@ -4,7 +4,7 @@ services:
     container_name: lifecycle_pg
     restart: always
     environment:
-      POSTGRES_USER: vanshika
+      POSTGRES_USER: ByteMe
       POSTGRES_PASSWORD: root
       POSTGRES_DB: trust_safety
     ports:
