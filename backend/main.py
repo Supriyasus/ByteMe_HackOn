@@ -1,46 +1,51 @@
+# File: backend/main.py
+
 import os
 from fastapi import FastAPI
-from routers import ingestion
-from routers import metrics
 from fastapi.middleware.cors import CORSMiddleware
-from Post_Purchase.routers import fraud_router      #For Post_Purchase
-from Fake_Review_Detection.routers import review_router # For Fake Review Detection
 
+# --- 1. Import all your routers ---
+# These are in the local 'backend/routers/' folder
+from routers import ingestion, metrics, admin, detect 
 
+# These are in their own feature modules
+from Post_Purchase.routers import fraud_router
+from Fake_Review_Detection.routers import review_router
+
+# --- 2. Initialize the FastAPI App ---
 app = FastAPI(
     title="BYTEME Hackathon Project",
+    description="API for Trust & Safety features including counterfeit detection, fake review analysis, and post-purchase fraud."
 )
 
-app.include_router(ingestion.router)
-
-# Allow frontend to access API
+# --- 3. Add CORS Middleware ---
+# This allows your React frontend (on localhost:3000) to communicate with the API.
+origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --- 4. Include all routers ---
+# This is the central point where you define the final URL structure.
 
-#app.include_router(ingestion.router)
-app.include_router(metrics.router)
-app.include_router(fraud_router.router, prefix="/api/v1")   #For Post_Purchase
-app.include_router(review_router.router, prefix="/api/v1")  # For Fake Review Detection
+# General/utility routers
+app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
+app.include_router(admin.router, prefix="/api/v1", tags=["Admin"]) # e.g., /api/v1/admin/flagged/
+
+# Core feature routers
+app.include_router(ingestion.router, prefix="/api/v1", tags=["Ingestion"]) # e.g., /api/v1/ingest/upload_listing/
+app.include_router(detect.router, prefix="/api/v1", tags=["Detection"]) # e.g., /api/v1/detect/counterfeit/
+
+# Other feature-specific routers
+app.include_router(fraud_router.router, prefix="/api/v1")
+app.include_router(review_router.router, prefix="/api/v1")
 
 
-# Ensure folders exist
-UPLOAD_DIR = "uploads"
-EVIDENCE_DIR = "evidence"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(EVIDENCE_DIR, exist_ok=True)
-
-# Include routers
-app.include_router(ingestion.router)
-app.include_router(detect.router)
-app.include_router(admin.router)
-
-# Root route
+# --- 5. Define a root endpoint for a simple health check ---
 @app.get("/")
 def read_root():
-    return {"message": "Counterfeit Detection API running"}
+    return {"message": "Trust & Safety API is running"}
