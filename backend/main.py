@@ -20,10 +20,9 @@ app = FastAPI(
 
 # --- 3. Add CORS Middleware ---
 # This allows your React frontend (on localhost:3000) to communicate with the API.
-origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +42,19 @@ app.include_router(detect.router, prefix="/api/v1", tags=["Detection"]) # e.g., 
 # Other feature-specific routers
 app.include_router(fraud_router.router, prefix="/api/v1")
 app.include_router(review_router.router, prefix="/api/v1")
+
+
+# Ensure folders exist
+UPLOAD_DIR = "uploads"
+EVIDENCE_DIR = "evidence"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(EVIDENCE_DIR, exist_ok=True)
+
+# Include routers
+app.include_router(ingestion.router)
+app.include_router(detect.router)
+app.include_router(admin.router)
+
 
 
 # --- 5. Define a root endpoint for a simple health check ---

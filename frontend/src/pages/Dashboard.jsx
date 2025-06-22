@@ -1,62 +1,49 @@
 import React, { useEffect, useState } from "react";
-import { fetchMetrics, fetchSuspiciousCustomers, fetchFlaggedReviews, fetchFakeReviewStats  } from "../services/api.js"
+import axios from "../api/axios";
 import { Bar, Line, Pie } from "react-chartjs-2";
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
-// import FakeReviewAnalyzer from '../components/FlaggedReviewsList.jsx';
-import CounterfeitDetector from '../components/CounterfeitDetector';
-import FlaggedReviewsList from '../components/FlaggedReviewsList';
-import ProductIngestionForm from '../components/ProductIngestionForm';
-import FlaggedListingsAdmin from '../components/FlaggedListingsAdmin';
-
+import {
+  Chart as ChartJS,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from "chart.js";
+import FlaggedReviewsList from "../components/FlaggedReviewsList";
+import {AdminBoard} from "./AdminBoard";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
-
-
-// === REPLACE THE OLD SuspiciousCustomersTable with this corrected version ===
-
 const SuspiciousCustomersTable = ({ customers }) => {
-  if (!customers || customers.length === 0) {
-    return <p>No high-risk customer data available.</p>;
-  }
+  if (!customers || customers.length === 0) return <p>No high-risk customer data available.</p>;
 
-  // Function to format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
-  }
-
-  // Define style objects at the top for clarity
-  const tableHeaderStyle = { textAlign: "left", padding: "8px", borderBottom: "2px solid #ccc" };
-  // Create a right-aligned version for the numerical columns
-  const tableHeaderRightAlignStyle = { ...tableHeaderStyle, textAlign: "right" };
-  const tableCellStyle = { textAlign: "left", padding: "8px" };
-  const tableCellRightAlignStyle = { ...tableCellStyle, textAlign: "right" };
+  const formatCurrency = (value) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
 
   return (
     <div style={{ marginTop: "40px" }}>
       <h3>High-Risk Customer Watchlist</h3>
-      <p>Top customers flagged for anomalous return behavior by the model.</p>
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
         <thead style={{ backgroundColor: "#f2f2f2" }}>
           <tr>
-            <th style={tableHeaderStyle}>Customer ID</th>
-            <th style={tableHeaderStyle}>Risk Score</th>
-            {/* --- THIS IS THE CORRECTED PART --- */}
-            <th style={tableHeaderRightAlignStyle}>Return Rate (by items)</th>
-            <th style={tableHeaderRightAlignStyle}>Value Returned</th>
-            <th style={tableHeaderRightAlignStyle}>Net Spend</th>
+            <th>Customer ID</th>
+            <th>Risk Score</th>
+            <th>Return Rate</th>
+            <th>Value Returned</th>
+            <th>Net Spend</th>
           </tr>
         </thead>
         <tbody>
-          {customers.map((customer) => (
-            <tr key={customer.CustomerID} style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={tableCellStyle}>{customer.CustomerID}</td>
-              <td style={{...tableCellStyle, color: 'red', fontWeight: 'bold'}}>{customer.anomaly_score.toFixed(4)}</td>
-              <td style={tableCellRightAlignStyle}>{(customer.return_rate_by_items * 100).toFixed(2)}%</td>
-              <td style={tableCellRightAlignStyle}>{formatCurrency(customer.total_value_returned)}</td>
-              <td style={{...tableCellRightAlignStyle, color: customer.total_spend < 0 ? 'red' : 'green'}}>
-                  {formatCurrency(customer.total_spend)}
-              </td>
+          {customers.map((c) => (
+            <tr key={c.CustomerID}>
+              <td>{c.CustomerID}</td>
+              <td style={{ color: 'red' }}>{c.anomaly_score.toFixed(4)}</td>
+              <td>{(c.return_rate_by_items * 100).toFixed(2)}%</td>
+              <td>{formatCurrency(c.total_value_returned)}</td>
+              <td style={{ color: c.total_spend < 0 ? 'red' : 'green' }}>{formatCurrency(c.total_spend)}</td>
             </tr>
           ))}
         </tbody>
@@ -65,73 +52,56 @@ const SuspiciousCustomersTable = ({ customers }) => {
   );
 };
 
-
 const Dashboard = () => {
   const [metrics, setMetrics] = useState(null);
-
-  // === ADD NEW STATE for the customer list ===
   const [suspiciousCustomers, setSuspiciousCustomers] = useState([]);
-
   const [flaggedReviews, setFlaggedReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState({ labels: [], datasets: [] });
-  
 
   useEffect(() => {
-    async function loadMetrics() {
-      const data = await fetchMetrics();
-      setMetrics(data);
+    const loadData = async () => {
+      try {
+        const metricsRes = await axios.get("/api/metrics");
+        setMetrics(metricsRes.data);
 
-      // SuspiciousCustomers List
-      const customersData = await fetchSuspiciousCustomers();
-      setSuspiciousCustomers(customersData); 
+        const customersRes = await axios.get("/api/v1/post-purchase/suspicious_customers_report");
+        setSuspiciousCustomers(customersRes.data);
 
-      // Fetch the new report data
-      // Fetch new stats and format for PIE chart
-      const statsData = await fetchFakeReviewStats();
-      const formattedStats = {
+        const reviewStatsRes = await axios.get("/api/v1/reviews/stats");
+        setReviewStats({
           labels: ['Fake Reviews Flagged', 'Real Reviews Analyzed'],
           datasets: [{
-              label: 'Review Analysis',
-              data: [statsData.fake_count || 0, statsData.real_count || 0],
-              backgroundColor: [
-                  'rgba(255, 99, 132, 0.7)', // Red for Fake
-                  'rgba(54, 162, 235, 0.7)', // Blue for Real
-              ],
-              borderColor: [
-                  'rgba(255, 99, 132, 1)',
-                  'rgba(54, 162, 235, 1)',
-              ],
-              borderWidth: 1,
-          }],
-      };
-      setReviewStats(formattedStats);
+            label: 'Review Analysis',
+            data: [reviewStatsRes.data.fake_count || 0, reviewStatsRes.data.real_count || 0],
+            backgroundColor: ['rgba(255,99,132,0.7)', 'rgba(54,162,235,0.7)'],
+            borderColor: ['rgba(255,99,132,1)', 'rgba(54,162,235,1)'],
+            borderWidth: 1
+          }]
+        });
 
+        const flaggedRes = await axios.get("/api/v1/reviews/flagged");
+        setFlaggedReviews(flaggedRes.data);
+      } catch (err) {
+        console.error("Dashboard Load Error:", err);
+      }
+    };
 
-      const flaggedData = await fetchFlaggedReviews();
-      
-      // 3. VERIFY THE STATE IS BEING SET
-      setFlaggedReviews(flaggedData);
-
-    }
-    loadMetrics();
-    // loadData();
+    loadData();
   }, []);
 
   if (!metrics) return <p>Loading dashboard...</p>;
-  // if (!data) return <p>Loading dashboard2...</p>;
 
   return (
-    <div className="dashboard" style={{ padding: "20px" }}>
+    <div style={{ padding: "20px" }}>
       <h2>Admin Trust & Safety Dashboard</h2>
-      
-      {/* Summary Cards */}
+
       <div style={{ display: "flex", gap: "20px", marginBottom: "30px", flexWrap: "wrap" }}>
         {[
           { title: "Total Listings Scanned", value: metrics.total_listings },
           { title: "Counterfeit Flagged %", value: `${metrics.counterfeit_flagged_pct}%` },
           { title: "Fake Review Detection %", value: `${metrics.fake_review_pct}%` },
           { title: "Avg. Seller Trust Score", value: metrics.avg_trust_score },
-          { title: "Return Fraud Flags Today", value: metrics.return_flags_today },
+          { title: "Return Fraud Flags Today", value: metrics.return_flags_today }
         ].map((card, idx) => (
           <div key={idx} style={{
             flex: "1 1 200px",
@@ -146,7 +116,6 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Charts */}
       <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 400px" }}>
           <h4>Flagged Reviews Over Time</h4>
@@ -173,48 +142,19 @@ const Dashboard = () => {
           }} />
         </div>
       </div>
-      
 
       <SuspiciousCustomersTable customers={suspiciousCustomers} />
-
-      {/* <FakeReviewAnalyzer /> */}
 
       <div style={{ display: 'flex', gap: '40px', marginTop: '40px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 400px' }}>
           <h4>Fake vs. Real Reviews Ratio</h4>
-          {/* Use the Pie component */}
-          <Pie data={reviewStats} options={{ responsive: true, plugins: { legend: { position: 'top' }}}}/>
+          <Pie data={reviewStats} />
         </div>
         <div style={{ flex: '2 1 600px' }}>
           <FlaggedReviewsList reviews={flaggedReviews} />
         </div>
       </div>
-      
-      {/* SUSPICIOUS CUSTOMERS FLAGGED: */}
 
-      {/* <div style={{ marginTop: '40px' }}>
-        <SuspiciousCustomersTable customers={suspiciousCustomers} />
-      </div> */}
-
-      <div>
-            <CounterfeitDetector />
-      </div>    
-      
-       {/* New Section for Ingestion and Admin Review */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
-          
-          {/* --- Left Column: Product Upload Form --- */}
-          <div>
-            <ProductIngestionForm />
-          </div>
-
-          {/* --- Right Column: Admin Flagged List --- */}
-          <div>
-            <FlaggedListingsAdmin />
-          </div>
-      </div>
-
-      {/* Activity Logs */}
       <div style={{ marginTop: "40px" }}>
         <h4>Recent Activity Logs</h4>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -238,7 +178,6 @@ const Dashboard = () => {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };
