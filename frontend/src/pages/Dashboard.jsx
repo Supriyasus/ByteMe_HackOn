@@ -3,8 +3,11 @@ import { fetchMetrics, fetchSuspiciousCustomers, fetchFlaggedReviews, fetchFakeR
 import { Bar, Line, Pie } from "react-chartjs-2";
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
 // import FakeReviewAnalyzer from '../components/FlaggedReviewsList.jsx';
-
+import CounterfeitDetector from '../components/CounterfeitDetector';
 import FlaggedReviewsList from '../components/FlaggedReviewsList';
+import ProductIngestionForm from '../components/ProductIngestionForm';
+import FlaggedListingsAdmin from '../components/FlaggedListingsAdmin';
+
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
@@ -193,6 +196,23 @@ const Dashboard = () => {
         <SuspiciousCustomersTable customers={suspiciousCustomers} />
       </div>
 
+      <div>
+            <CounterfeitDetector />
+      </div>    
+      
+       {/* New Section for Ingestion and Admin Review */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
+          
+          {/* --- Left Column: Product Upload Form --- */}
+          <div>
+            <ProductIngestionForm />
+          </div>
+
+          {/* --- Right Column: Admin Flagged List --- */}
+          <div>
+            <FlaggedListingsAdmin />
+          </div>
+      </div>
 
       {/* Activity Logs */}
       <div style={{ marginTop: "40px" }}>
