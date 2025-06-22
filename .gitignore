@@ -24,3 +24,5 @@ venv/
 .pytest_cache/
 .mypy_cache/
 *.env
+
+*.csv:Zone.Identifier
