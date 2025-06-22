@@ -1,75 +1,109 @@
 from fastapi import APIRouter, UploadFile, File, Form
 import shutil
 import os
+import json
 from uuid import uuid4
+from datetime import datetime
+
+from models.counterfeit_detector import (
+    compute_image_text_similarity,
+    compute_logo_flags
+)
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
 UPLOAD_DIR = "uploads/"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+EVIDENCE_DIR = "evidence/"
+FLAGGED_LOG = "flagged_items.json"
 
-# manage the upload of image by the seller and use it later for counterfeit detection
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(EVIDENCE_DIR, exist_ok=True)
+
+# 📄 Log flagged listings
+def log_flagged_product(product_id, seller_id, score, image_path, title, description, flags):
+    flagged_item = {
+        "product_id": product_id,
+        "seller_id": seller_id,
+        "similarity_score": score,
+        "predicted_brand": flags["predicted_brand"],
+        "claimed_brand": flags["claimed_brand"],
+        "brand_confidence": flags["brand_confidence"],
+        "top_3_brand_guesses": flags["top_3_brand_guesses"],
+        "image_path": image_path,
+        "title": title,
+        "description": description,
+        "status": "flagged",
+        "timestamp": datetime.now().isoformat()
+    }
+
+    data = []
+    if os.path.exists(FLAGGED_LOG):
+        with open(FLAGGED_LOG, "r") as f:
+            data = json.load(f)
+
+    data.append(flagged_item)
+
+    with open(FLAGGED_LOG, "w") as f:
+        json.dump(data, f, indent=2)
+
+# 🚀 Upload route
 @router.post("/upload_listing/")
 async def upload_product_listing(
     image: UploadFile = File(...),
     title: str = Form(...),
     description: str = Form(...),
-    seller_id: str = Form(...)
+    seller_id: str = Form(...),
+    product_id: str = Form(...)
 ):
     file_ext = image.filename.split('.')[-1]
     filename = f"{uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    temp_path = os.path.join(UPLOAD_DIR, filename)
 
-    with open(file_path, "wb") as buffer:
+    with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    # Save metadata to DB (skipped here, but can be added)
+    # ✏️ Text + CLIP analysis
+    full_text = f"{title.strip()} - {description.strip()}"
+    similarity_score = compute_image_text_similarity(temp_path, full_text)
+
+    # 🧠 Brand prediction
+    flags = compute_logo_flags(temp_path, title)
+
+    # 🚨 Decide if suspicious
+    suspected_counterfeit = (
+        similarity_score < 0.25 or
+        flags["brand_mismatch"]
+    )
+
+    if suspected_counterfeit:
+        evidence_path = os.path.join(EVIDENCE_DIR, filename)
+        shutil.move(temp_path, evidence_path)
+        log_flagged_product(
+            product_id=product_id,
+            seller_id=seller_id,
+            score=similarity_score,
+            image_path=evidence_path,
+            title=title,
+            description=description,
+            flags=flags
+        )
+        image_path = evidence_path
+    else:
+        os.remove(temp_path)
+        image_path = None
+
     return {
         "message": "Listing uploaded",
-        "image_path": file_path,
         "title": title,
         "description": description,
-        "seller_id": seller_id
-    }
-
-@router.post("/upload_review/")
-async def upload_review(
-    image: UploadFile = File(...),
-    review_text: str = Form(...),
-    rating: int = Form(...),
-    product_id: str = Form(...),
-    user_id: str = Form(...)
-):
-    file_ext = image.filename.split('.')[-1]
-    filename = f"{uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
-
-    return {
-        "message": "Review uploaded",
-        "image_path": file_path,
-        "review_text": review_text,
-        "rating": rating,
+        "seller_id": seller_id,
         "product_id": product_id,
-        "user_id": user_id
-    }
-
-@router.post("/log_event/")
-async def log_user_event(
-    event_type: str = Form(...),  # "return", "complaint", etc.
-    user_id: str = Form(...),
-    product_id: str = Form(...),
-    comment: str = Form("")
-):
-    # Log this into DB or file (can be used for post-purchase fraud detection)
-    return {
-        "message": "Event logged",
-        "event": {
-            "type": event_type,
-            "user_id": user_id,
-            "product_id": product_id,
-            "comment": comment
-        }
+        "clip_similarity_score": round(similarity_score, 3),
+        "predicted_brand": flags["predicted_brand"],
+        "brand_confidence": flags["brand_confidence"],
+        "top_3_brand_guesses": flags["top_3_brand_guesses"],
+        "claimed_brand": flags["claimed_brand"],
+        "brand_mismatch": flags["brand_mismatch"],
+        "suspected_counterfeit": suspected_counterfeit,
+        "image_path": image_path if image_path else "Deleted (not suspicious)"
     }
