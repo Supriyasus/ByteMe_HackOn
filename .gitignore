@@ -1,19 +1,36 @@
-# Python
-__pycache__/
+# Python virtual environment
+venv/
+amazon/
+
+# ByteMe_HackOn specific directories
+uploads/
+evidence/
+flagged_items.json
+
+# ByteMe_HackOn specific files
 *.pyc
-*.pkl
-.env
+__pycache__/
 
-# Node
-node_modules/
-dist/
+# IDE specific files
+.vscode/
+*.code-workspace
 
-# System
+# System files
 .DS_Store
 Thumbs.db
 
-# VSCode
-.vscode/
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Node.js dependencies
+node_modules/
+
+# Docker
+*.pid
+docker-compose.override.yml
 
 # Python virtual environments
 venv/

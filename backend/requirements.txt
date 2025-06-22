@@ -8,4 +8,27 @@ joblib
 transformers
 torch
 sentence-transformers
-# For Fake Review Detection
+# For Fake Review Detection--extra-index-url https://download.pytorch.org/whl/cu121
+
+# Editable CLIP module
+-e ./CLIP
+
+# PyTorch ecosystem (CUDA 12.1 build)
+torch==2.2.2+cu121
+torchvision==0.17.2+cu121
+torchaudio==2.2.2+cu121
+
+# ML/NLP packages
+sentence-transformers==2.6.1
+transformers==4.41.1
+
+# Backend
+fastapi==0.110.0
+uvicorn==0.30.1
+python-multipart==0.0.9
+
+# Utility
+pillow==10.3.0
+pandas==2.2.2
+kagglehub==0.2.1
+numpy==1.26.4
