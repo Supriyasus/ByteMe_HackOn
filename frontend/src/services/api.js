@@ -21,7 +21,7 @@ async function handleResponse(response) {
 // Corresponds to: /api/metrics (Note the double /api/api/ in your list might be a typo, usually it's just /api/)
 export async function fetchMetrics() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/metrics`);
+    const response = await fetch(`${API_BASE_URL}/api/api/metrics`);
     return await handleResponse(response);
   } catch (error) {
     console.error("Failed to fetch metrics:", error);

@@ -192,9 +192,9 @@ const Dashboard = () => {
       
       {/* SUSPICIOUS CUSTOMERS FLAGGED: */}
 
-      <div style={{ marginTop: '40px' }}>
+      {/* <div style={{ marginTop: '40px' }}>
         <SuspiciousCustomersTable customers={suspiciousCustomers} />
-      </div>
+      </div> */}
 
       <div>
             <CounterfeitDetector />
