@@ -6,7 +6,7 @@ joblib
 # For Post_Purchase
 
 transformers
-torch
+# torch
 sentence-transformers
 # For Fake Review Detection--extra-index-url https://download.pytorch.org/whl/cu121
 
