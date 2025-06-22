@@ -4,3 +4,9 @@ pandas
 scikit-learn
 joblib
 # For Post_Purchase
+sqlalchemy
+asyncpg
+psycopg2-binary
+pydantic
+alembic
+python-dotenv
