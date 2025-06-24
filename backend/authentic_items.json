@@ -1,0 +1,18 @@
+[
+  {
+    "product_id": "PID481",
+    "seller_id": "SID1213",
+    "title": "Samsung Phone",
+    "description": "Samsung galaxy ultra",
+    "status": "authentic",
+    "timestamp": "2025-06-23T06:04:20.130222"
+  },
+  {
+    "product_id": "PID112",
+    "seller_id": "SID117",
+    "title": "HP ",
+    "description": "Hp Laptop with high fast processor",
+    "status": "authentic",
+    "timestamp": "2025-06-23T06:40:25.926295"
+  }
+]

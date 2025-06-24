@@ -15,9 +15,11 @@ router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 UPLOAD_DIR = "uploads/"
 EVIDENCE_DIR = "evidence/"
 FLAGGED_LOG = "flagged_items.json"
+AUTHENTIC_LOG = "authentic_items.json"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(EVIDENCE_DIR, exist_ok=True)
+
 
 # 📄 Log flagged listings
 def log_flagged_product(product_id, seller_id, score, image_path, title, description, flags):
@@ -46,6 +48,29 @@ def log_flagged_product(product_id, seller_id, score, image_path, title, descrip
     with open(FLAGGED_LOG, "w") as f:
         json.dump(data, f, indent=2)
 
+
+# ✅ Log authentic listings
+def log_authentic_product(product_id, seller_id, title, description):
+    item = {
+        "product_id": product_id,
+        "seller_id": seller_id,
+        "title": title,
+        "description": description,
+        "status": "authentic",
+        "timestamp": datetime.now().isoformat()
+    }
+
+    data = []
+    if os.path.exists(AUTHENTIC_LOG):
+        with open(AUTHENTIC_LOG, "r") as f:
+            data = json.load(f)
+
+    data.append(item)
+
+    with open(AUTHENTIC_LOG, "w") as f:
+        json.dump(data, f, indent=2)
+
+
 # 🚀 Upload route
 @router.post("/upload_listing/")
 async def upload_product_listing(
@@ -62,14 +87,10 @@ async def upload_product_listing(
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    # ✏️ Text + CLIP analysis
     full_text = f"{title.strip()} - {description.strip()}"
     similarity_score = compute_image_text_similarity(temp_path, full_text)
-
-    # 🧠 Brand prediction
     flags = compute_logo_flags(temp_path, title)
 
-    # 🚨 Decide if suspicious
     suspected_counterfeit = (
         similarity_score < 0.25 or
         flags["brand_mismatch"]
@@ -90,6 +111,12 @@ async def upload_product_listing(
         image_path = evidence_path
     else:
         os.remove(temp_path)
+        log_authentic_product(
+            product_id=product_id,
+            seller_id=seller_id,
+            title=title,
+            description=description
+        )
         image_path = None
 
     return {
@@ -107,3 +134,21 @@ async def upload_product_listing(
         "suspected_counterfeit": suspected_counterfeit,
         "image_path": image_path if image_path else "Deleted (not suspicious)"
     }
+
+
+# 📥 GET flagged items
+@router.get("/flagged_items/")
+def get_flagged_items():
+    if os.path.exists(FLAGGED_LOG):
+        with open(FLAGGED_LOG, "r") as f:
+            return json.load(f)
+    return []
+
+
+# 📥 GET authentic items
+@router.get("/authentic_items/")
+def get_authentic_items():
+    if os.path.exists(AUTHENTIC_LOG):
+        with open(AUTHENTIC_LOG, "r") as f:
+            return json.load(f)
+    return []

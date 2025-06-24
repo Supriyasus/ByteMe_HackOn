@@ -170,7 +170,7 @@ const AdminBoard = () => {
       </div>
       
 
-      <SuspiciousCustomersTable customers={suspiciousCustomers} />
+      {/* <SuspiciousCustomersTable customers={suspiciousCustomers} /> */}
 
       {/* <FakeReviewAnalyzer /> */}
 

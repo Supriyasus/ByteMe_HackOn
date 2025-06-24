@@ -61,12 +61,15 @@ const Dashboard = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Fetch overall metrics
         const metricsRes = await axios.get("/api/metrics");
         setMetrics(metricsRes.data);
 
+        // Fetch suspicious customers
         const customersRes = await axios.get("/api/v1/post-purchase/suspicious_customers_report");
         setSuspiciousCustomers(customersRes.data);
-
+        
+        // Fetch review stats and flagged reviews
         const reviewStatsRes = await axios.get("/api/v1/reviews/stats");
         setReviewStats({
           labels: ['Fake Reviews Flagged', 'Real Reviews Analyzed'],
@@ -149,6 +152,7 @@ const Dashboard = () => {
         <div style={{ flex: '1 1 400px' }}>
           <h4>Fake vs. Real Reviews Ratio</h4>
           <Pie data={reviewStats} />
+          {/* <Pie data={reviewStats} options={{ responsive: true, plugins: { legend: { position: 'top' }}}}/> */}
         </div>
         <div style={{ flex: '2 1 600px' }}>
           <FlaggedReviewsList reviews={flaggedReviews} />
